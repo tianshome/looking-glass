@@ -1,0 +1,71 @@
+Repository scaffold status (complete)
+
+Implemented:
+
+- Worker (TypeScript)
+  - Bundled directives.yml + directives.yml.sig (auto-embedded via embed-directives.mjs)
+  - Endpoints:
+    - /directives.yml and /directives.yml.sig (static text)
+    - /api/directives (YAML → JSON)
+    - /api/agents (presence list; filtered by offline/hidden thresholds)
+    - /api/config (turnstile sitekey)
+  - WebSockets:
+    - /ws/agent/<agent-id> → AgentDirectoryDO (register + heartbeat)
+    - /ws/query → Turnstile verify + routed to QuerySessionDO
+  - Durable Objects:
+    - AgentDirectoryDO: tracks first_seen/last_seen; routes agent events to QuerySessionDO
+    - QuerySessionDO: per-job session, broadcasts to clients, stall watchdog, cancel, D1 audit
+  - D1 schema: agent_presence + audit_requests tables
+  - Turnstile verification (per-query)
+  - Rate limiting stub (ratelimit.ts)
+
+- Agent (Go)
+  - Periodic fetch directives.yml + directives.yml.sig from Worker
+  - Signature verification via ssh-keygen -Y verify (ssh-ed25519 pubkey via CLI string)
+  - WebSocket: register + heartbeat with display_name support
+  - Exec handling:
+    - IPv4/IPv6 target validation (no spaces, valid IP)
+    - argv substitution: {target}, {source_v4}, {source_v6}
+    - argv_list support for multi-command execution
+    - exec.Command (no shell)
+  - Streaming stdout/stderr chunks + periodic keepalive frames
+  - Cancel support (best-effort via context cancellation)
+  - Built binaries: build/lg-agent, build/lg-agent-arm64
+
+- Frontend (React/TS)
+  - Fetch directives + agents on load
+  - UI for selecting directive/agent + target (hostname or IP)
+  - DNS resolution via Cloudflare DoH (frontend/src/lib/dns.ts)
+    - Auto-detects IPv4/IPv6 from directive field description
+    - Multiple addresses → IP selection dialog
+  - Turnstile explicit render + token capture
+  - WebSocket streaming client
+  - ANSI output rendering (ansi-to-react)
+  - Error modal dialogs
+  - shadcn-style components: button, card, input, select, dialog
+
+- Directives (directives.yml)
+  - ping_v4, ping_v6
+  - traceroute_v4, traceroute_v6
+  - nexttrace_v4, nexttrace_v6
+  - bird_route_v4, bird_route_v6
+
+- Scripts
+  - scripts/sign_directives.sh: signs directives.yml with ssh-keygen
+  - worker/scripts/embed-directives.mjs: embeds YAML + sig into bundled.ts
+
+- Documentation
+  - README.md: quick start + deploy notes
+  - AGENTS.md: agent protocol spec
+  - docs/AGENTS.md, docs/TECH_STACK.md, docs/IMPLEMENTATION_PLAN.md
+
+Not implemented / TODO (explicit):
+- Cloudflare Workers Rate Limiting API integration (worker/src/ratelimit.ts is a stub)
+  - Exact binding depends on Cloudflare account configuration.
+- Rich directive features:
+  - Multiple input fields (vars)
+  - Advanced rule types beyond regex/CIDR
+- UI polish:
+  - Terminal scroll-to-bottom on output
+  - Reconnect logic
+  - Copy/download output

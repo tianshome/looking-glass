@@ -1,0 +1,51 @@
+# Production wrangler configuration
+# Copy this file to wrangler.prod.toml and fill in your values.
+#
+# Usage:
+#   cp wrangler.prod.toml.example wrangler.prod.toml
+#   # Edit wrangler.prod.toml with your secrets and database_id
+#   wrangler deploy --config wrangler.prod.toml
+#
+# Note: wrangler.prod.toml is gitignored to keep secrets out of version control.
+
+name = "lg-distributed"
+main = "src/worker.ts"
+compatibility_date = "2026-02-26"
+
+[build]
+command = "cd ../frontend && npm run build && cd ../worker && node ./scripts/embed-directives.mjs"
+
+[vars]
+# Secrets - generate/obtain and fill in before deploying
+AGENT_SHARED_SECRET = "YOUR_SECRET_HERE"  # generate with: openssl rand -base64 32
+TURNSTILE_SITEKEY = "YOUR_TURNSTILE_SITEKEY_HERE"  # from Cloudflare Turnstile dashboard
+TURNSTILE_SECRET = "YOUR_TURNSTILE_SECRET_HERE"  # from Cloudflare Turnstile dashboard
+
+# Non-sensitive configuration
+OFFLINE_AFTER_MS = "120000"
+HIDDEN_AFTER_MS = "604800000"
+STALL_TIMEOUT_MS = "20000"
+MAX_CMD_RUNTIME_MS = "30000"
+RATE_LIMIT_ENABLED = "false"
+
+[assets]
+directory = "../frontend/dist"
+
+# If you need to rename AgentDirectorySQLiteDO and QuerySessionSQLiteDO,
+# you need to rename references in worker.ts as well.
+[[durable_objects.bindings]]
+name = "AGENTS"
+class_name = "AgentDirectorySQLiteDO"
+
+[[durable_objects.bindings]]
+name = "QUERIES"
+class_name = "QuerySessionSQLiteDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["AgentDirectorySQLiteDO", "QuerySessionSQLiteDO"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lg_logs"
+database_id = "YOUR_PRODUCTION_DATABASE_ID_HERE"

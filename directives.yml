@@ -1,0 +1,131 @@
+nexttrace_v6:
+  name: Nexttrace (v6)
+  rules:
+    - condition: ".*"
+      action: permit
+      command:
+        argv:
+          ["nexttrace", "-g", "en", "-P", "--source", "{source_v6}", "{target}"]
+  field:
+    type: text
+    description: "IPv6"
+
+nexttrace_v4:
+  name: Nexttrace (v4)
+  rules:
+    - condition: ".*"
+      action: permit
+      command:
+        argv:
+          ["nexttrace", "-g", "en", "-P", "--source", "{source_v4}", "{target}"]
+  field:
+    type: text
+    description: "IPv4"
+
+ping_v4:
+  name: Ping (v4)
+  rules:
+    - condition: ".*"
+      action: permit
+      command:
+        argv: ["ping", "-I", "{source_v4}", "-c", "5", "{target}"]
+  field:
+    type: text
+    description: "IPv4"
+
+ping_v6:
+  name: Ping (v6)
+  rules:
+    - condition: ".*"
+      action: permit
+      command:
+        argv: ["ping", "-I", "{source_v6}", "-c", "5", "{target}"]
+  field:
+    type: text
+    description: "IPv6"
+
+traceroute_v4:
+  name: Traceroute (v4)
+  rules:
+    - condition: ".*"
+      action: permit
+      command:
+        argv:
+          [
+            "traceroute",
+            "-s",
+            "{source_v4}",
+            "-n",
+            "-w",
+            "2",
+            "-q",
+            "1",
+            "{target}",
+          ]
+  field:
+    type: text
+    description: "IPv4"
+
+traceroute_v6:
+  name: Traceroute (v6)
+  rules:
+    - condition: ".*"
+      action: permit
+      command:
+        argv:
+          [
+            "traceroute",
+            "-s",
+            "{source_v6}",
+            "-n",
+            "-w",
+            "2",
+            "-q",
+            "1",
+            "{target}",
+          ]
+  field:
+    type: text
+    description: "IPv4"
+
+bird_route_v4:
+  name: Bird Route (v4)
+  rules:
+    - condition: ".*"
+      action: permit
+      command:
+        argv:
+          [
+            "birdc",
+            "show",
+            "route",
+            "table",
+            "table_ibgp_v4",
+            "for",
+            "{target}",
+            "all",
+          ]
+  field:
+    type: text
+    description: "IPv4"
+
+bird_route_v6:
+  name: Bird Route (v6)
+  rules:
+    - condition: ".*"
+      action: permit
+      command:
+        argv:
+          [
+            "birdc",
+            "show",
+            "route",
+            "table",
+            "table_ibgp_v6",
+            "for",
+            "{target}",
+            "all",
+          ]
+  field:
+    type: text
+    description: "IPv6"

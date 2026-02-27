@@ -1,0 +1,56 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.bak
+
+# Node / PNPM
+node_modules/
+**/node_modules/
+dist/
+build/
+.vite/
+.wrangler/
+coverage/
+*.log
+pnpm-debug.log*
+
+# Go
+agent/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+
+# Environment / Secrets
+.env
+.env.*
+.dev.vars
+*.local
+
+# Temp
+tmp/
+
+# Signing keys (private keys should never be committed)
+keys/
+*.pem
+*.key
+id_ed25519
+id_ed25519.pub
+id_rsa
+id_rsa.pub
+
+# Production wrangler config (contains D1 database_id)
+worker/wrangler.prod.toml
+
+# Automatically populated- do not repeat
+worker/src/bundled.ts
+directives.yml.sig

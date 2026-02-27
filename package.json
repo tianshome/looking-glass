@@ -1,0 +1,16 @@
+{
+  "name": "lg-distributed",
+  "private": true,
+  "workspaces": [
+    "worker",
+    "frontend"
+  ],
+  "scripts": {
+    "build": "pnpm -C frontend build && pnpm -C worker build",
+    "dev": "pnpm -C worker dev",
+    "format": "prettier -w ."
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3"
+  }
+}

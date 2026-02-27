@@ -1,0 +1,38 @@
+name = "lg-distributed"
+main = "src/worker.ts"
+compatibility_date = "2026-02-26"
+
+[build]
+command = "cd ../frontend && npm run build && cd ../worker && node ./scripts/embed-directives.mjs"
+
+[vars]
+# Local dev only - copy from example.env to .dev.vars
+# Production config (with secrets) goes in wrangler.prod.toml (gitignored)
+OFFLINE_AFTER_MS = "120000"
+HIDDEN_AFTER_MS = "604800000"
+STALL_TIMEOUT_MS = "20000"
+MAX_CMD_RUNTIME_MS = "30000"
+RATE_LIMIT_ENABLED = "false"
+
+# Serve built frontend assets from the same Worker.
+# Build frontend into ../frontend/dist and then deploy.
+[assets]
+directory = "../frontend/dist"
+
+[[durable_objects.bindings]]
+name = "AGENTS"
+class_name = "AgentDirectorySQLiteDO"
+
+[[durable_objects.bindings]]
+name = "QUERIES"
+class_name = "QuerySessionSQLiteDO"
+
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["AgentDirectorySQLiteDO", "QuerySessionSQLiteDO"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lg_logs"
+database_id = "local-dev-placeholder"
