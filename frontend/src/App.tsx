@@ -1,6 +1,7 @@
 import Anser from "ansi-to-react";
 import React, {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -29,6 +30,31 @@ import { AgentInfo, getAgents, getConfig, getDirectives } from "@/lib/api";
 import { resolveDNS, resolveBoth } from "@/lib/dns";
 import { detectAddressFamily } from "@/lib/directive";
 import { isIPAddress } from "@/lib/ip";
+
+interface OutputChunk {
+  seq: number;
+  data: string;
+}
+
+function binaryInsertChunk(
+  chunks: OutputChunk[],
+  newChunk: OutputChunk,
+): OutputChunk[] {
+  let lo = 0;
+  let hi = chunks.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (chunks[mid].seq < newChunk.seq) {
+      lo = mid + 1;
+    } else {
+      hi = mid;
+    }
+  }
+  const result = chunks.slice(0, lo);
+  result.push(newChunk);
+  result.push(...chunks.slice(lo));
+  return result;
+}
 
 declare global {
   interface Window {
@@ -134,7 +160,7 @@ export function App() {
 
   const [running, setRunning] = useState(false);
   const [jobId, setJobId] = useState<string>("");
-  const [output, setOutput] = useState<string>("");
+  const [chunks, setChunks] = useState<OutputChunk[]>([]);
 
   const [resolving, setResolving] = useState(false);
   const [resolvedIPs, setResolvedIPs] = useState<{
@@ -162,9 +188,14 @@ export function App() {
         const cfg = await getConfig();
         setSitekey(cfg.turnstile_sitekey);
         const [a, d] = await Promise.all([getAgents(), getDirectives()]);
-        setAgents(a.agents);
+        const sortedAgents = [...a.agents].sort((x, y) =>
+          (x.display_name ?? x.agent_id).localeCompare(
+            y.display_name ?? y.agent_id,
+          ),
+        );
+        setAgents(sortedAgents);
         setDirectives(d.directives);
-        setAgentId(a.agents[0]?.agent_id ?? "");
+        setAgentId(sortedAgents[0]?.agent_id ?? "");
         setDirectiveId(Object.keys(d.directives)[0] ?? "");
         setLoading(false);
       } catch (e: any) {
@@ -223,7 +254,7 @@ export function App() {
 
   function executeWithTarget(resolvedTarget: string) {
     setErr(null);
-    setOutput("");
+    setChunks([]);
     setJobId("");
     setRunning(true);
 
@@ -257,17 +288,29 @@ export function App() {
       }
 
       if (msg.type === "chunk") {
-        setOutput((o) => o + String(msg.data ?? ""));
+        const seq = typeof msg.seq === "number" ? msg.seq : 0;
+        const data = String(msg.data ?? "");
+        setChunks((prev) => binaryInsertChunk(prev, { seq, data }));
         return;
       }
 
       if (msg.type === "stalled") {
-        setOutput((o) => o + "\n[stalled]\n");
+        setChunks((prev) =>
+          binaryInsertChunk(prev, {
+            seq: Number.MAX_SAFE_INTEGER - 1,
+            data: "\n[stalled]\n",
+          }),
+        );
         return;
       }
 
       if (msg.type === "exit") {
-        setOutput((o) => o + `\n[exit ${msg.code ?? 0}]\n`);
+        setChunks((prev) =>
+          binaryInsertChunk(prev, {
+            seq: Number.MAX_SAFE_INTEGER,
+            data: `\n[exit ${msg.code ?? 0}]\n`,
+          }),
+        );
         return;
       }
 
@@ -410,7 +453,11 @@ export function App() {
               className="text-xs rounded-md p-3 min-h-[320px] ansi-output"
               style={{ backgroundColor: "#F3F3F3", color: "#3e3e3e" }}
             >
-              {output ? <Anser useClasses>{output}</Anser> : "(no output yet)"}
+              {chunks.length > 0 ? (
+                <Anser useClasses>{chunks.map((c) => c.data).join("")}</Anser>
+              ) : (
+                "(no output yet)"
+              )}
             </pre>
           </CardContent>
         </Card>
