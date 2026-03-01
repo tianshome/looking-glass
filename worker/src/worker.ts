@@ -551,6 +551,9 @@ type QueryState = {
   target?: string;
   last_event_at: number;
   stalled: boolean;
+  exit_received: boolean;
+  exit_code?: number;
+  close_scheduled: boolean;
 };
 
 export class QuerySessionDO {
@@ -570,6 +573,8 @@ export class QuerySessionDO {
       started: false,
       last_event_at: Date.now(),
       stalled: false,
+      exit_received: false,
+      close_scheduled: false,
     };
   }
 
@@ -719,20 +724,32 @@ export class QuerySessionDO {
   }
 
   private async onAgentEvent(msg: any): Promise<void> {
-    // Reset stall timer on keepalive/chunk.
     if (msg.type === "chunk" || msg.type === "keepalive") {
       this.q.last_event_at = Date.now();
       this.bumpStallTimer();
       this.broadcast(msg);
+      if (this.q.exit_received) {
+        this.scheduleClose();
+      }
       return;
     }
 
     if (msg.type === "exit") {
+      this.q.exit_received = true;
+      this.q.exit_code = Number(msg.code ?? 0);
       this.broadcast(msg);
-      await this.complete(Number(msg.code ?? 0));
-      this.closeAll();
+      await this.complete(this.q.exit_code);
+      this.scheduleClose();
       return;
     }
+  }
+
+  private scheduleClose(): void {
+    if (this.q.close_scheduled) return;
+    this.q.close_scheduled = true;
+    setTimeout(() => {
+      this.closeAll();
+    }, 500);
   }
 
   private broadcast(msg: any): void {
