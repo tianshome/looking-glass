@@ -28,6 +28,8 @@ import (
 	"nhooyr.io/websocket"
 )
 
+var version = "dev"
+
 type DirectiveCommand struct {
 	Argv     []string   `yaml:"argv" json:"argv"`
 	ArgvList [][]string `yaml:"argv_list" json:"argv_list"`
